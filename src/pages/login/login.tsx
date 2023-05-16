@@ -56,7 +56,7 @@ const Login = () => {
 	};
 
 	return (
-		<main className='w-full h-screen overflow-hidden flex flex-col gap-6 items-center justify-center bg-slate-200'>
+		<main className='w-full h-screen overflow-hidden flex flex-col gap-6 items-center justify-center bg-slate-50'>
 			<h2 className='text-3xl font-bold'>One Cluster</h2>
 			<form
 				onSubmit={handleSubmit(onSubmit)}

@@ -37,7 +37,7 @@ const PointOfSale = () => {
 	}, [dispatch, pos, isAuthenticated]);
 
 	return isAuthenticated ? (
-		<main className='w-full h-screen max-h-screen  overflow-hidden scrollbar-hide'>
+		<main className='w-full h-screen max-h-screen bg-slate-50 overflow-hidden scrollbar-hide'>
 			<div className='w-full h-full flex'>
 				<Sidebar />
 				<Storage />
