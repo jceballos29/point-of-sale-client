@@ -25,10 +25,15 @@ const salesSlice = createSlice({
 		},
 		setOrder: (state, action) => {
 			state.order = action.payload;
+		},
+		resetSales: (state) => {
+			state.orders = initialState.orders;
+			state.order = initialState.order;
+			state.device = initialState.device;
 		}
 	},
 });
 
-export const { setDevice, setOrders, setOrder } = salesSlice.actions;
+export const { setDevice, setOrders, setOrder, resetSales } = salesSlice.actions;
 
 export default salesSlice.reducer;

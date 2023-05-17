@@ -30,10 +30,16 @@ const modalSlice = createSlice({
       state.type = initialState.type;
       state.id = initialState.id;
       state.item = initialState.item;
+    },
+    resetModal: (state) => {
+      state.isOpen = initialState.isOpen;
+      state.type = initialState.type;
+      state.id = initialState.id;
+      state.item = initialState.item;
     }
   }
 });
 
-export const { openModal, closeModal } = modalSlice.actions;
+export const { openModal, closeModal, resetModal } = modalSlice.actions;
 
 export default modalSlice.reducer;

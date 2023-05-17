@@ -1,52 +1,76 @@
-import React from 'react';
-import { useLoaderData } from 'react-router-dom';
-import { getPos } from '@/services';
-import { Category, Party, Product } from '@/types';
-import { useDispatch, useSelector } from 'react-redux';
-import { setCategories, setParties, setProducts } from '@/redux/slices/pos.slice';
-import { Order, Sidebar, Storage } from './components';
-import { AppStore } from '@/redux/store';
+/* eslint-disable react-hooks/exhaustive-deps */
+import {
+	categoriesAdapter,
+	partiesAdapter,
+	productsAdapter,
+} from '@/adapters';
 import { Loader } from '@/components';
-
-type LoaderData = {
-	products: Product[];
-	categories: Category[];
-	parties: Party[]
-};
-
-export const PointOfSaleLoader = async () => {
-	return await getPos()
-};
+import { useCallAndLoad } from '@/hooks';
+import {
+	setCategories,
+	setParties,
+	setProducts,
+} from '@/redux/slices/pos.slice';
+import {
+	fetchCategories,
+	fetchParties,
+	fetchProducts,
+} from '@/services';
+import {
+	CategoryResponse,
+	PartyResponse,
+	ProductResponse
+} from '@/types';
+import React from 'react';
+import { useDispatch } from 'react-redux';
+import { Order, Sidebar, Storage } from './components';
+// import { Storage } from './components';
 
 const PointOfSale = () => {
-	const pos = useLoaderData() as LoaderData
-	const {  isAuthenticated } = useSelector(
-		(store: AppStore) => store.auth,
-	);
+	const { callEndpoint, loading } = useCallAndLoad();
 
 	const dispatch = useDispatch();
 
 	React.useEffect(() => {
-		if (isAuthenticated) {
-			dispatch(setProducts(pos.products));
-			dispatch(setCategories(pos.categories));
-			dispatch(setParties(pos.parties))
-		} else {
-			window.location.href = '/'
-		}
-	}, [dispatch, pos, isAuthenticated]);
+		const getPos = async () => {
+			try {
+				const productsResponse = await callEndpoint(fetchProducts());
+				const categories = await callEndpoint(fetchCategories());
+				const parties = await callEndpoint(fetchParties());
+				dispatch(
+					setProducts(
+						productsAdapter(
+							productsResponse.data as ProductResponse[],
+						),
+					),
+				);
+				dispatch(
+					setCategories(
+						categoriesAdapter(categories.data as CategoryResponse[]),
+					),
+				);
+				dispatch(
+					setParties(partiesAdapter(parties.data as PartyResponse[])),
+				);
+			} catch (error) {
+				console.log(error);
+			}
+		};
 
-	return isAuthenticated ? (
-		<main className='w-full h-screen max-h-screen bg-slate-50 overflow-hidden scrollbar-hide'>
+		getPos();
+	}, []);
+
+	return loading ? (
+		<Loader />
+	) : (
+		<main className='w-full h-screen max-h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden scrollbar-hide transition-all duration-200'>
 			<div className='w-full h-full flex'>
 				<Sidebar />
 				<Storage />
 				<Order />
 			</div>
 		</main>
-	) : (
-		<Loader />
-	)
+	);
 };
 
 export default PointOfSale;

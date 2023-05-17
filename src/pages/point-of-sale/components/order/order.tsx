@@ -1,11 +1,14 @@
+import { salesAdapter } from '@/adapters';
+import { useCallAndLoad } from '@/hooks';
+import { openModal } from '@/redux/slices/modal.slice';
 import { setOrder, setOrders } from '@/redux/slices/sales.slice';
 import { AppStore } from '@/redux/store';
 import {
 	canceledSale,
 	completeSale,
-	getSales,
-} from '@/services/sales.service';
-import { Sale } from '@/types';
+	fetchSales,
+} from '@/services';
+import { Sale, SaleResponse } from '@/types';
 import { formatCurrency } from '@/utils';
 import {
 	BanknotesIcon,
@@ -15,17 +18,15 @@ import {
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Product } from './components';
-import { openModal } from '@/redux/slices/modal.slice';
-import { salesAdapter } from '@/adapters';
 
 export interface OrderState {
 	sale: Sale | null;
 	payment: string;
-	completing: boolean;
-	deleting: boolean;
+	action: 'complete' | 'delete' | undefined;
 }
 
 const Order = () => {
+	const { callEndpoint, loading } = useCallAndLoad();
 	const { order, device } = useSelector(
 		(store: AppStore) => store.sales,
 	);
@@ -36,21 +37,26 @@ const Order = () => {
 
 	const [payment, setPayment] =
 		React.useState<OrderState['payment']>('cash');
-	const [completing, setCompleting] =
-		React.useState<OrderState['completing']>(false);
-	const [deleting, setDeleting] =
-		React.useState<OrderState['deleting']>(false);
+	const [action, setAction] =
+		React.useState<OrderState['action']>(undefined);
 
 	const dispatch = useDispatch();
 
-	const canceledOrder = async () => {
+	const handlerCompleteSale = async () => {
 		try {
-			setDeleting(true);
-			const response = await canceledSale(order?.id as string);
-			if (response === 200) {
-				const orders = await getSales(device?.id as string);
+			setAction('complete');
+			const response = await callEndpoint(
+				completeSale({
+					id: order?.id as string,
+					paymentMethod: payment as string,
+				}),
+			);
+			if (response.status === 200) {
+				const orders = await callEndpoint(
+					fetchSales(device?.id as string),
+				);
 				if (orders) {
-					const result = salesAdapter(orders)
+					const result = salesAdapter(orders.data as SaleResponse[]);
 					dispatch(setOrders(result));
 					dispatch(setOrder(result[0]));
 				}
@@ -58,21 +64,22 @@ const Order = () => {
 		} catch (error) {
 			console.log(error);
 		} finally {
-			setDeleting(false);
+			setAction(undefined);
 		}
 	};
 
-	const completeOrder = async () => {
+	const handlerCancelSale = async () => {
 		try {
-			setCompleting(true);
-			const response = await completeSale(
-				order?.id as string,
-				payment,
+			setAction('delete');
+			const response = await callEndpoint(
+				canceledSale(order?.id as string),
 			);
-			if (response === 200) {
-				const orders = await getSales(device?.id as string);
+			if (response.status === 200) {
+				const orders = await callEndpoint(
+					fetchSales(device?.id as string),
+				);
 				if (orders) {
-					const result = salesAdapter(orders)
+					const result = salesAdapter(orders.data as SaleResponse[]);
 					dispatch(setOrders(result));
 					dispatch(setOrder(result[0]));
 				}
@@ -80,7 +87,7 @@ const Order = () => {
 		} catch (error) {
 			console.log(error);
 		} finally {
-			setCompleting(false);
+			setAction(undefined);
 		}
 	};
 
@@ -94,26 +101,26 @@ const Order = () => {
 		<>
 			<Product />
 			<aside className='fixed top-0 right-0 z-10 h-full w-96 p-4'>
-				<div className='w-full h-full bg-slate-200 rounded-2xl shadow-inner p-2 flex items-center justify-center'>
+				<div className='w-full h-full bg-slate-200 dark:bg-slate-900 transition-all duration-200 rounded-2xl shadow-inner p-2 flex items-center justify-center'>
 					{order ? (
 						<div className='relative w-full h-full flex flex-col'>
-							<div className='absolute top-0 left-0 w-full flex items-center bg-white p-2 shadow rounded-xl'>
+							<div className='absolute top-0 left-0 w-full flex items-center bg-slate-50 dark:bg-slate-500 transition-all duration-200 p-2 shadow rounded-xl'>
 								<div className='w-full relative flex flex-col items-start justify-center'>
-									<h2 className='text-3xl text-slate-900 font-bold'>
+									<h2 className='text-3xl text-slate-900 dark:text-slate-100 transition-all duration-200 font-bold'>
 										Venta{' '}
-										<span className='text-slate-800'>
+										<span className='text-slate-800 dark:text-slate-300 transition-all duration-200'>
 											{order.number}
 										</span>
 									</h2>
 									{user?.role === 'admin' && (
-										<p className='text-slate-400 text-xs capitalize pl-1'>
+										<p className='text-slate-400 dark:text-slate-300 transition-all duration-200 text-xs capitalize pl-1'>
 											<span className='font-medium'>Vendedor:</span>{' '}
 											<span className='italic'>
 												{order.user?.name}
 											</span>
 										</p>
 									)}
-									<p className='text-slate-400 text-xs capitalize pl-1'>
+									<p className='text-slate-400 dark:text-slate-300 transition-all duration-200 text-xs capitalize pl-1'>
 										<span className='font-medium'>Cliente:</span>{' '}
 										<span className='italic'>
 											{
@@ -125,25 +132,23 @@ const Order = () => {
 									</p>
 								</div>
 								<button
-									disabled={deleting || completing}
-									onClick={async () => await canceledOrder()}
-									className='text-red-600 w-20 aspect-square flex items-center justify-center'
+									disabled={loading}
+									onClick={async () => await handlerCancelSale()}
+									className='text-red-600 dark:text-slate-900 transition-all duration-200 w-20 aspect-square flex items-center justify-center'
 								>
-									{deleting ? (
-										<div className='w-8 aspect-square border-4 border-red-600 border-t-white rounded-full animate-spin' />
+									{loading && action === 'delete' ? (
+										<div className='w-8 aspect-square border-4 border-red-600 dark:border-slate-900 border-t-white dark:border-t-slate-600 rounded-full animate-spin transition-all duration-200' />
 									) : (
 										<TrashIcon width={32} />
 									)}
 								</button>
 							</div>
 							<div
-								className={`w-full h-full ${
-									user?.role === 'admin' ? 'mt-[92px]' : 'mt-[76px]'
-								} mb-64 pb-2 overflow-y-auto scrollbar-hide`}
+								className='w-full h-full mt-24 mb-64 pb-2 overflow-y-auto scrollbar-hide transition-all duration-200'
 							>
 								{order?.items?.map((item) => (
 									<button
-										disabled={completing || deleting}
+										disabled={loading}
 										onClick={() => {
 											dispatch(
 												openModal({
@@ -154,28 +159,28 @@ const Order = () => {
 											);
 										}}
 										key={item.id}
-										className='w-full h-14 bg-slate-300 rounded-xl shadow flex items-center px-4 mb-2 select-none'
+										className='w-full h-14 bg-slate-300 dark:bg-slate-700 transition-all duration-200 rounded-xl shadow flex items-center px-4 mb-2 select-none'
 									>
-										<span className='w-3/5 capitalize truncate font-medium text-left'>
+										<span className='w-3/5 capitalize truncate font-medium text-left text-slate-950 dark:text-slate-300 transition-all duration-200'>
 											{
 												products.find(
 													(product) => product.id === item.product,
 												)?.name
 											}
 										</span>
-										<span className='w-1/5 text-sm text-center'>
+										<span className='w-1/5 text-sm text-center text-slate-950 dark:text-slate-300 transition-all duration-200'>
 											{item.quantity}
 										</span>
-										<span className='w-1/5 text-sm text-slate-700 font-semibold text-right'>
+										<span className='w-1/5 text-sm text-slate-700 dark:text-slate-200 transition-all duration-200 font-semibold text-right'>
 											{formatCurrency(item.price * item.quantity)}
 										</span>
 									</button>
 								))}
 							</div>
-							<div className='absolute bottom-0 left-0 w-full flex flex-col gap-2 p-2 bg-slate-300 rounded-xl shadow'>
-								<div className='divide-y divide-dashed divide-slate-400'>
+							<div className='absolute bottom-0 left-0 w-full flex flex-col gap-2 p-2 bg-slate-300 dark:bg-slate-700 transition-all duration-200 rounded-xl shadow'>
+								<div className='divide-y divide-dashed divide-slate-400 dark:divide-slate-500 transition-all duration-200'>
 									<div className='pb-1'>
-										<p className='text-sm w-full flex justify-between text-slate-500'>
+										<p className='text-sm w-full flex justify-between text-slate-500 dark:text-slate-400 transition-all duration-200'>
 											Subtotal:{' '}
 											<span className='font-medium'>
 												{formatCurrency(
@@ -185,7 +190,7 @@ const Order = () => {
 												)}
 											</span>
 										</p>
-										<p className='text-sm w-full flex justify-between text-slate-500'>
+										<p className='text-sm w-full flex justify-between text-slate-500 dark:text-slate-400 transition-all duration-200'>
 											Descuento:{' '}
 											<span className='font-medium'>
 												{formatCurrency(
@@ -196,7 +201,7 @@ const Order = () => {
 											</span>
 										</p>
 									</div>
-									<h3 className='text-2xl pt-1 font-bold w-full flex justify-between'>
+									<h3 className='text-2xl pt-1 font-bold w-full flex justify-between text-salte-950 dark:text-slate-100 transition-all duration-200'>
 										Total{' '}
 										<span className='font-black'>
 											{formatCurrency(order.total)}
@@ -205,28 +210,28 @@ const Order = () => {
 								</div>
 								<div className='w-full flex flex-col gap-2'>
 									<div className='w-full'>
-										<h4 className='text-sm text-slate-500 mb-1 font-semibold'>
+										<h4 className='text-sm text-slate-500 dark:text-slate-300 transition-all duration-200 mb-1 font-semibold'>
 											Método de pago
 										</h4>
 										<div className='w-full flex gap-2'>
 											<button
-												disabled={completing || deleting}
+												disabled={loading}
 												onClick={() => setPayment('cash')}
-												className={`flex-1 h-14 border-2 border-white shadow rounded-lg flex flex-col items-center justify-center ${
+												className={`flex-1 h-14 border-2 border-slate-50 dark:border-slate-300 shadow rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${
 													payment === 'cash'
-														? 'bg-white text-slate-900'
-														: 'text-slate-500'
+														? 'bg-slate-50 text-slate-900 dark:bg-slate-300 transition-all duration-200'
+														: 'text-slate-500 dark:text-slate-900 transition-all duration-200'
 												} transition-all duration-200`}
 											>
 												<BanknotesIcon width={24} />
 											</button>
 											<button
-												disabled={completing || deleting}
+												disabled={loading}
 												onClick={() => setPayment('transfer')}
-												className={`flex-1 h-14 border-2 border-white shadow rounded-lg flex flex-col items-center justify-center ${
+												className={`flex-1 h-14 border-2 border-slate-50 dark:border-slate-300 shadow rounded-lg flex flex-col items-center justify-center transition-all duration-200 ${
 													payment === 'transfer'
-														? 'bg-white text-slate-900'
-														: 'text-slate-500'
+														? 'bg-slate-50 text-slate-900 dark:bg-slate-300 transition-all duration-200'
+														: 'text-slate-500 dark:text-slate-900 transition-all duration-200'
 												} transition-all duration-200`}
 											>
 												<QrCodeIcon width={24} />
@@ -234,17 +239,17 @@ const Order = () => {
 										</div>
 									</div>
 									<button
-										disabled={completing || deleting}
-										onClick={async () => await completeOrder()}
-										className='w-full h-14 flex items-center justify-center bg-white shadow rounded-lg'
+										disabled={loading}
+										onClick={async () => await handlerCompleteSale()}
+										className='w-full h-14 flex items-center justify-center bg-slate-50 dark:bg-slate-300 text-slate-900 dark:text-slate-700 shadow rounded-lg transfer'
 									>
-										{completing ? (
+										{loading && action === 'complete' ? (
 											<>
-												<span className='flex w-5 h-5 items-center justify-center border-4 border-slate-900 border-l-transparent rounded-full mr-4 animate-spin' />
+												<span className='flex w-5 h-5 items-center justify-center border-4 border-slate-900 dark:border-slate-700 transfer border-l-transparent dark:border-t-slate-500 rounded-full mr-4 animate-spin' />
 												<span>Pagando...</span>
 											</>
 										) : (
-											<span className='text-slate-900 font-semibold'>
+											<span className='text-slate-900 dark:text-slate-700 transition-all duration-200 font-semibold'>
 												Pagar
 											</span>
 										)}
@@ -254,7 +259,9 @@ const Order = () => {
 						</div>
 					) : (
 						<div className='w-3/4 flex flex-col'>
-							<h4 className='text-2xl text-center font-bold'>Selecciona o inicia una nueva venta</h4>
+							<h4 className='text-2xl text-center font-bold text-slate-950 dark:text-slate-100 transition-all duration-200'>
+								Selecciona o inicia una nueva venta
+							</h4>
 						</div>
 					)}
 				</div>

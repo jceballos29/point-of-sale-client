@@ -1,5 +1,7 @@
-import { saleAdapter } from '@/adapters';
 import axios, { AxiosError } from 'axios';
+import { axiosInstance } from '@/api';
+import { loadAbort } from '@/utils';
+import { SaleResponse } from '@/types';
 
 type ItemRequest = {
 	product: string;
@@ -8,195 +10,102 @@ type ItemRequest = {
 	discount: number;
 };
 
-export const getSales = async (device: string) => {
-	try {
-		const BASE_URL = import.meta.env.VITE_API_URL;
-		const DATABASE = sessionStorage.getItem('database');
-		const TOKEN = sessionStorage.getItem('token');
+type SaleRequest = {
+	device: string;
+	party: string;
+}
 
-		if (!TOKEN) return null;
+type CompleteSaleRequest = {
+	id: string; 
+	paymentMethod: string;
+}
 
-		const URL = `${BASE_URL}/${DATABASE}`;
+const controller = loadAbort();
 
-		const instance = axios.create({
-			baseURL: URL,
-			headers: {
-				Authorization: `Bearer ${TOKEN}`,
+export const fetchSales = (device: string) => {
+	return {
+		call: axiosInstance.get<SaleResponse[]>(
+			`/sales?device=${device}`,
+			{
+				signal: controller.signal,
 			},
-		});
+		),
+		controller
+	};
+};
 
-		const response = await instance.get(`/sales?device=${device}`);
+export const fetchSale = (id: string) => {
+	return {
+		call: axiosInstance.get<SaleResponse>(
+			`/sales/${id}`,
+			{
+				signal: controller.signal,
+			},
+		),
+		controller
+	};
+}
 
-		return response.data;
-	} catch (error) {
-		if (axios.isAxiosError(error)) {
-			const axiosError: AxiosError = error;
-			if (axiosError.response?.status === 404) {
-				// handle 404 errors
-			}
-		} else {
-			// handle other errors
-		}
+export const startSale = (request: SaleRequest) => {
+	return {
+		call: axiosInstance.post<SaleResponse>(
+			`/sales`,
+			request,
+			{ signal: controller.signal, }
+		),
+		controller
 	}
-};
+}
 
-export const getSaleById = async (id: string) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
+export const completeSale = (data: CompleteSaleRequest) => {
+	return {
+		call: axiosInstance.put<SaleResponse>(
+			`/sales/${data.id}`,
+			{paymentMethod: data.paymentMethod},
+			{ signal: controller.signal, }
+		),
+		controller
+	}
+}
 
-	if (!TOKEN) return null;
+export const canceledSale = (id: string) => {
+	return {
+		call: axiosInstance.delete<SaleResponse>(
+			`/sales/${id}`,
+			{ signal: controller.signal, }
+		),
+		controller
+	}
+}
 
-	const URL = `${BASE_URL}/${DATABASE}`;
+export const addSaleItem = (id: string, item: ItemRequest) => {
+	return {
+		call: axiosInstance.post<SaleResponse>(
+			`/sales/${id}/items`,
+			item,
+			{ signal: controller.signal, }
+		),
+		controller
+	}
+}
 
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
+export const updateSaleItem = (id: string, itemId: string, item: ItemRequest) => {
+	return {
+		call: axiosInstance.put<SaleResponse>(
+			`/sales/${id}/items/${itemId}`,
+			item,
+			{ signal: controller.signal, }
+		),
+		controller
+	}
+}
 
-	const response = await instance.get(`/sales/${id}`);
-
-	return response.data;
-};
-
-export const createSale = async (device: string, party: string) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.post(`/sales`, { device, party });
-
-	return saleAdapter(response.data);
-};
-
-export const canceledSale = async (id: string) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.delete(`/sales/${id}`);
-
-	return response.status;
-};
-
-export const completeSale = async (
-	id: string,
-	paymentMethod: string,
-) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.put(`/sales/${id}`, {
-		paymentMethod,
-	});
-
-	return response.status;
-};
-
-export const addItem = async (id: string, item: ItemRequest) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.post(`/sales/${id}/items`, item);
-
-	return response.status;
-};
-
-export const updateItem = async (
-	id: string,
-	itemId: string,
-	item: ItemRequest,
-) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.put(
-		`/sales/${id}/items/${itemId}`,
-		item,
-	);
-
-	return response.status;
-};
-
-export const deleteItem = async (id: string, itemId: string) => {
-	const BASE_URL = import.meta.env.VITE_API_URL;
-	const DATABASE = sessionStorage.getItem('database');
-	const TOKEN = sessionStorage.getItem('token');
-
-	if (!TOKEN) return null;
-
-	const URL = `${BASE_URL}/${DATABASE}`;
-
-	const instance = axios.create({
-		baseURL: URL,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-		},
-	});
-
-	const response = await instance.delete(
-		`/sales/${id}/items/${itemId}`,
-	);
-
-	return response.status;
-};
+export const deleteSaleItem = (id: string, itemId: string) => {
+	return {
+		call: axiosInstance.delete<SaleResponse>(
+			`/sales/${id}/items/${itemId}`,
+			{ signal: controller.signal, }
+		),
+		controller
+	}
+}

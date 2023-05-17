@@ -1,1 +1,0 @@
-export { default as FullScreenButton } from './full-screen.button';

@@ -50,6 +50,14 @@ const posSlice = createSlice({
     },
     resetSearchedProducts: (state) => {
       state.searchedProducts = state.products;
+    },
+    resetPos: (state) => {
+      state.products = initialState.products;
+      state.categories = initialState.categories;
+      state.parties = initialState.parties;
+      state.category = initialState.category;
+      state.searchedProducts = initialState.searchedProducts;
+      state.search = initialState.search;
     }
   }
 });
@@ -63,7 +71,8 @@ export const {
   resetSearch,
   setSearch,
   setSearchedProducts,
-  resetSearchedProducts
+  resetSearchedProducts,
+  resetPos
  } = posSlice.actions;
 
 export default posSlice.reducer;

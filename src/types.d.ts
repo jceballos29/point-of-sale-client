@@ -1,3 +1,10 @@
+import { AxiosResponse } from 'axios';
+
+export type AxiosCall<T> = {
+  call: Promise<AxiosResponse<T>>;
+	controller: AbortController;
+}
+
 export type ProductResponse = {
   _id: string,
   name: string,
@@ -29,6 +36,7 @@ export type UserResponse = {
   _id: string,
   name: string,
   name: string,
+  password?: string,
   username: string,
   email: string,
   role: string,
@@ -110,9 +118,13 @@ export type Device = {
 }
 
 export type LoginRequest = {
-  database: string,
   username: string,
   password: string,
+}
+
+export type LoginResponse = {
+  token: string,
+  user: UserResponse
 }
 
 export type Party = {

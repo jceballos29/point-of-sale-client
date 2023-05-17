@@ -21,7 +21,7 @@ const Categories: React.FC = () => {
 	return (
 		<div className='w-full'>
 			<div className='w-full flex justify-between items-center mb-4'>
-				<h3 className='text-slate-900 text-2xl font-bold'>
+				<h3 className='text-slate-900 dark:text-slate-100 text-2xl font-bold transition-all duration-200'>
 					Categorías
 				</h3>
 			</div>
@@ -42,14 +42,14 @@ const Categories: React.FC = () => {
 							}}
 							className={`h-16 ${
 								selectedCategory?.id === category.id
-									? 'bg-slate-300'
-									: 'bg-slate-200'
-							} rounded-lg flex flex-col items-start justify-center px-4  select-none cursor-pointer hover:shadow transition duration-150`}
+									? 'bg-slate-300 dark:bg-slate-500'
+									: 'bg-slate-200 dark:bg-slate-700'
+							} rounded-lg flex flex-col items-start justify-center px-4  select-none cursor-pointer hover:shadow transition-all duration-200`}
 						>
-							<h3 className='text-lg text-slate-900 font-bold capitalize'>
+							<h3 className='text-lg text-slate-900 dark:text-slate-100 font-bold capitalize transition-all duration-200'>
 								{category.name}
 							</h3>
-							<p className='text-slate-500 text-sm capitalize font-light leading-none'>
+							<p className='text-slate-500 dark:text-slate-400 text-sm capitalize font-light leading-none transition-all duration-200'>
 								{category.products}{' '}
 								{category.products > 1 ? 'products' : 'product'}
 							</p>

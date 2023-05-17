@@ -1,25 +1,26 @@
-import { Transition, Dialog } from '@headlessui/react';
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { AppStore } from '@/redux/store';
-import { closeModal } from '@/redux/slices/modal.slice';
-import { Product as ProductType } from '@/types';
-import { formatCurrency } from '@/utils';
-import {
-	addItem,
-	deleteItem,
-	getSaleById,
-	getSales,
-	updateItem,
-} from '@/services/sales.service';
-import { getProducts } from '@/services';
-import { setProducts } from '@/redux/slices/pos.slice';
-import { setOrder, setOrders } from '@/redux/slices/sales.slice';
 import {
 	productsAdapter,
 	saleAdapter,
 	salesAdapter,
 } from '@/adapters';
+import { useCallAndLoad } from '@/hooks';
+import { closeModal } from '@/redux/slices/modal.slice';
+import { setProducts } from '@/redux/slices/pos.slice';
+import { setOrder, setOrders } from '@/redux/slices/sales.slice';
+import { AppStore } from '@/redux/store';
+import { fetchProducts } from '@/services';
+import {
+	addSaleItem,
+	deleteSaleItem,
+	fetchSale,
+	fetchSales,
+	updateSaleItem
+} from '@/services';
+import { ProductResponse, Product as ProductType, SaleResponse } from '@/types';
+import { formatCurrency } from '@/utils';
+import { Dialog, Transition } from '@headlessui/react';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 
 export interface ProductState {
 	product: ProductType | undefined;
@@ -27,8 +28,7 @@ export interface ProductState {
 	discount: number;
 	tab: 'quantity' | 'discount';
 	pad: string;
-	busy: boolean;
-	deleting: boolean
+	action: 'add' | 'edit' | 'delete' | ''
 }
 
 const btnValues = [
@@ -39,8 +39,7 @@ const btnValues = [
 ];
 
 const Product = () => {
-	const dispatch = useDispatch();
-
+	const { callEndpoint, loading } = useCallAndLoad();
 	const { isOpen, id, type, item } = useSelector((store: AppStore) => store.modal);
 	const { products, categories } = useSelector((store: AppStore) => store.pos);
 	const { order, device } = useSelector((store: AppStore) => store.sales);
@@ -50,8 +49,9 @@ const Product = () => {
 	const [discount, setDiscount] = React.useState<ProductState['discount']>(0);
 	const [tab, setTab] = React.useState<ProductState['tab']>('quantity');
 	const [pad, setPad] = React.useState<ProductState['pad']>('');
-	const [busy, setBusy] = React.useState<ProductState['busy']>(false);
-	const [deleting, setDeleting] = React.useState<ProductState['deleting']>(false);
+	const [action, setAction] = React.useState<ProductState['action']>('');
+
+	const dispatch = useDispatch();
 
 	const handlerPad = (value: string) => {
 		if (value === 'OK') {
@@ -82,68 +82,68 @@ const Product = () => {
 	};
 
 	const restartPos = async () => {
-		const products = await getProducts();
-		const sale = await getSaleById(order?.id as string);
-		const orders = await getSales(device?.id as string);
-		dispatch(setProducts(productsAdapter(products)));
-		dispatch(setOrders(salesAdapter(orders)));
-		dispatch(setOrder(saleAdapter(sale)));
+		const products = await callEndpoint(fetchProducts())
+		const sale = await callEndpoint(fetchSale(order?.id as string))
+		const orders = await callEndpoint(fetchSales(device?.id as string))
+		dispatch(setProducts(productsAdapter(products.data as ProductResponse[])));
+		dispatch(setOrders(salesAdapter(orders.data as SaleResponse[])));
+		dispatch(setOrder(saleAdapter(sale.data as SaleResponse)));
 	}
 
 	const handlerAddItem = async () => {
 		try {
-			setBusy(true);
+			setAction('add')
 			const data = {
 				product: product?.id as string,
 				quantity,
 				price: product?.list_price as number,
 				discount,
 			};
-			const response = await addItem(order?.id as string, data);
-			if (response === 201) {
+			const response = await callEndpoint(addSaleItem(order?.id as string, data))
+			if (response.status === 201) {
 				await restartPos()
 				dispatch(closeModal());
 			}
 		} catch (error) {
 			console.log(error);
 		} finally {
-			setBusy(false);
+			setAction('')
 		}
 	};
 
 	const handlerEditItem = async () => {
 		try {
-			setBusy(true)
+			setAction('edit')
 			const data = {
 				product: product?.id as string,
 				quantity,
 				price: product?.list_price as number,
 				discount,
 			};
-			const response = await updateItem(order?.id as string, item?.id as string, data);
-			if (response === 200) {
+			const response = await callEndpoint(updateSaleItem(order?.id as string, item?.id as string, data))
+			if (response.status === 200) {
 				await restartPos()
 				dispatch(closeModal());
 			}
 		} catch (error) {
 			console.log(error);
 		} finally {
-			setBusy(false)
+			setAction('')
 		}
 	}
 
 	const handlerDeleteItem = async () => {
 		try {
-			setDeleting(true)
-			const response = await deleteItem(order?.id as string, item?.id as string);
-			if (response === 200) {
+			setAction('delete')
+			const response = await callEndpoint(deleteSaleItem(order?.id as string, item?.id as string));
+			if (response.status === 200) {
 				await restartPos()
 				dispatch(closeModal());
 			}
 		} catch (error) {
 			console.log(error);
 		} finally {
-			setDeleting(false)
+			setAction('')
 		}
 	}
 
@@ -184,7 +184,7 @@ const Product = () => {
 					leaveFrom='opacity-100'
 					leaveTo='opacity-0'
 				>
-					<div className='fixed inset-0 bg-black bg-opacity-25' />
+					<div className='fixed inset-0 bg-black bg-opacity-40' />
 				</Transition.Child>
 				<div className='fixed inset-0 overflow-y-auto'>
 					<div className='flex min-h-full items-center justify-center p-4 text-center'>
@@ -197,7 +197,7 @@ const Product = () => {
 							leaveFrom='opacity-100 scale-100'
 							leaveTo='opacity-0 scale-95'
 						>
-							<Dialog.Panel className='w-full max-w-lg h-[486px] transform overflow-hidden rounded-2xl bg-white  text-left align-middle shadow-xl transition-all flex select-none'>
+							<Dialog.Panel className='w-full max-w-lg h-[486px] transform overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-600  text-left align-middle shadow-xl transition-all duration-200 flex select-none'>
 								<div className='relative w-2/5 h-full rounded-r-2xl shadow-lg'>
 									<figure className='relative w-full aspect-square bg-slate-600 rounded-t-2xl overflow-hidden'>
 										<div className='absolute top-0 left-0 w-full h-full bg-gradient-to-t from-slate-900/60 to-transparent' />
@@ -207,10 +207,10 @@ const Product = () => {
 											className='object-cover w-full h-full'
 										/>
 									</figure>
-									<div className='z-10 absolute w-full h-[312px] bottom-0 bg-slate-200  rounded-2xl flex flex-col justify-between shadow-md p-4'>
+									<div className='z-10 absolute w-full h-[312px] bottom-0 bg-slate-200 dark:bg-slate-800 transition-all duration-200 rounded-2xl flex flex-col justify-between shadow-md p-4'>
 										<div className='w-full flex-grow flex flex-col justify-between mb-4'>
 											<div className='text-center'>
-												<p className='text-slate-500 text-xs uppercase font-normal mb-1 flex justify-center items-center gap-1'>
+												<p className='text-slate-500 dark:text-slate-400 transition-all duration-200 text-xs uppercase font-normal mb-1 flex justify-center items-center gap-1'>
 													{product?.categories.map(
 														(category: string) => (
 															<span key={category}>
@@ -223,30 +223,30 @@ const Product = () => {
 														),
 													)}
 												</p>
-												<h2 className='text-xl font-semibold text-slate-900 capitalize text-center leading-none mb-2'>
+												<h2 className='text-xl font-semibold text-slate-900 dark:text-slate-100 transition-all duration-200 capitalize text-center leading-none mb-2'>
 													{product?.name}
 												</h2>
-												<p className='text-slate-600 text-sm capitalize font-bold leading-none'>
+												<p className='text-slate-600 dark:text-slate-300 transition-all duration-200 text-sm capitalize font-bold leading-none'>
 													{formatCurrency(product?.list_price || 0)}
 												</p>
 											</div>
 
 											<div className='w-full'>
 												<div className='mb-6'>
-													<p className='text-slate-600 text-sm capitalize font-semibold text-center flex justify-between items-center'>
+													<p className='text-slate-600 dark:text-slate-300 transition-all duration-200 text-sm capitalize font-semibold text-center flex justify-between items-center'>
 														Cantidad
 														<span className='font-light italic'>
 															{quantity}
 														</span>
 													</p>
-													<p className='text-slate-600 text-sm capitalize font-semibold text-center flex justify-between items-center'>
+													<p className='text-slate-600 dark:text-slate-300 transition-all duration-200 text-sm capitalize font-semibold text-center flex justify-between items-center'>
 														Descuento
 														<span className='font-light italic'>
 															{formatCurrency(discount)}
 														</span>
 													</p>
 												</div>
-												<h3 className='w-full flex justify-between font-extrabold'>
+												<h3 className='w-full flex justify-between font-extrabold text-slate-950 dark:text-slate-200 transition-all duration-200'>
 													Subtotal
 													<span className='font-semibold'>
 														{formatCurrency(
@@ -261,17 +261,17 @@ const Product = () => {
 											{type == 'add' ? (
 												<button
 													type='button'
-													disabled={busy}
+													disabled={loading}
 													className={`w-full flex items-center justify-center h-10 ${
-														!busy
-															? 'bg-slate-600 text-slate-100'
-															: 'bg-slate-200 text-slate-300'
+														!loading
+															? 'bg-slate-600 text-slate-100 transition-all duration-200'
+															: 'bg-slate-400 text-slate-300 transition-all duration-200'
 													} rounded-lg`}
 													onClick={async () => {
 														await handlerAddItem();
 													}}
 												>
-													{busy ? (
+													{loading && action === 'add' ? (
 														<>
 															<span className='flex w-5 h-5 items-center justify-center border-4 border-white border-l-transparent rounded-full mr-4 animate-spin' />
 															<span>Agregando...</span>
@@ -284,9 +284,9 @@ const Product = () => {
 												<div>
 													<button
 														type='button'
-														disabled={busy || deleting}
+														disabled={loading}
 														className={`w-full flex items-center justify-center h-8 ${
-															!busy
+															!loading
 																? 'bg-slate-600 text-slate-100'
 																: 'bg-slate-200 text-slate-300'
 														} rounded-lg mb-2`}
@@ -294,7 +294,7 @@ const Product = () => {
 															await handlerEditItem();
 														}}
 													>
-														{busy ? (
+														{loading && action === 'edit' ? (
 															<>
 																<span className='flex w-5 h-5 items-center justify-center border-4 border-white border-l-transparent rounded-full mr-4 animate-spin' />
 																<span>Editando...</span>
@@ -305,9 +305,9 @@ const Product = () => {
 													</button>
 													<button
 														type='button'
-														disabled={deleting || busy}
+														disabled={loading}
 														className={`w-full flex items-center justify-center h-8 ${
-															!deleting
+															!loading
 																? 'bg-red-600 text-red-100'
 																: 'bg-red-200 text-red-300'
 														} rounded-lg`}
@@ -315,7 +315,7 @@ const Product = () => {
 															await handlerDeleteItem();
 														}}
 													>
-														{deleting ? (
+														{loading && action === 'delete' ? (
 															<>
 																<span className='flex w-5 h-5 items-center justify-center border-4 border-white border-l-transparent rounded-full mr-4 animate-spin' />
 																<span>Eliminando...</span>
@@ -336,8 +336,8 @@ const Product = () => {
 												<button
 													type='button'
 													className={`${
-														tab === 'quantity' ? 'bg-slate-200' : ''
-													} px-3 py-2 rounded-t-xl outline-none focus:outline-none transition duration-200 ease-in-out`}
+														tab === 'quantity' ? 'bg-slate-200 dark:bg-slate-400' : ''
+													} px-3 py-2 rounded-t-xl outline-none focus:outline-none transition duration-200 ease-in-out `}
 													onClick={() => {
 														setTab('quantity');
 													}}
@@ -345,9 +345,9 @@ const Product = () => {
 													<span
 														className={`font-semibold ${
 															tab === 'quantity'
-																? 'text-slate-600'
-																: 'text-slate-900'
-														} transition duration-200 ease-in-out`}
+																? 'text-slate-600 dark:text-slate-800'
+																: 'text-slate-900 dark:text-slate-300'
+														} transition-all duration-200 ease-in-out `}
 													>
 														Cantidad
 													</span>
@@ -358,7 +358,7 @@ const Product = () => {
 												<button
 													type='button'
 													className={`${
-														tab === 'discount' ? 'bg-slate-200' : ''
+														tab === 'discount' ? 'bg-slate-200 dark:bg-slate-400' : ''
 													} px-3 py-2 rounded-t-xl outline-none focus:outline-none transition-all duration-200 ease-in-out`}
 													onClick={() => {
 														setTab('discount');
@@ -367,9 +367,9 @@ const Product = () => {
 													<span
 														className={`font-semibold ${
 															tab === 'discount'
-																? 'text-slate-600'
-																: 'text-slate-900'
-														} transition duration-200 ease-in-out`}
+																? 'text-slate-600 dark:text-slate-800'
+																: 'text-slate-900 dark:text-slate-300'
+														} transition-all duration-200 ease-in-out`}
 													>
 														Descuento
 													</span>
@@ -377,12 +377,12 @@ const Product = () => {
 											</li>
 										</ul>
 										<div
-											className={`flex-grow w-full bg-slate-200 rounded-tr-xl p-3 ${
+											className={`flex-grow w-full bg-slate-200 dark:bg-slate-400 transition-all duration-200 rounded-tr-xl p-3 ${
 												tab === 'discount' ? 'rounded-tl-xl' : ''
 											} transition-all duration-200 ease-in-out flex flex-col gap-4`}
 										>
-											<p className='w-full h-5 flex justify-end text-xs items-center italic text-slate-500 leading-none transition duration-200 ease-in-out'></p>
-											<div className='w-full h-20 rounded-lg bg-white flex justify-end p-4 items-center text-3xl'>
+											<p className='w-full h-5 flex justify-end text-xs items-center italic text-slate-500 leading-none transition-all duration-200 ease-in-out'></p>
+											<div className='w-full h-20 rounded-lg bg-slate-50 dark:bg-slate-300 flex justify-end p-4 items-center text-3xl transition-all duration-200'>
 												{pad
 													? pad
 													: tab === 'quantity'
@@ -396,10 +396,10 @@ const Product = () => {
 														type='button'
 														className={`w-full  flex justify-center items-center rounded-lg  ${
 															item === 'C'
-																? 'bg-slate-300 text-slate-900 '
+																? 'bg-slate-300 text-slate-900 dark:bg-slate-500 dark:text-slate-100'
 																: item === 'OK'
-																? 'bg-green-400 text-green-800'
-																: 'bg-white text-slate-900 '
+																? 'bg-green-400 text-green-800 dark:bg-green-600 dark:text-green-100'
+																: 'bg-slate-50 text-slate-900 dark:bg-slate-300 dark:text-slate-950'
 														} text-lg font-semibold ${
 															(item === '.' || item === '%') &&
 															tab === 'quantity'
@@ -407,7 +407,7 @@ const Product = () => {
 																: ''
 														} ${
 															item === 'OK' ? 'col-span-2' : ''
-														} transition duration-200 ease-in-out`}
+														} transition-all duration-200 ease-in-out`}
 														disabled={
 															(item === '.' || item === '%') &&
 															tab === 'quantity'

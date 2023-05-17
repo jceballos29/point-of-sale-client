@@ -22,7 +22,7 @@ const Products: React.FC<ProductsProps> = ({ products }) => {
 
 	return (
 		<div className='w-full'>
-			<h3 className='text-slate-900 text-2xl font-bold mb-4'>
+			<h3 className='text-slate-900 dark:text-slate-100 text-2xl font-bold mb-4 transition-all duration-200'>
 				Productos
 			</h3>
 			<div className='w-full h-[512px]'>
@@ -45,17 +45,17 @@ const Products: React.FC<ProductsProps> = ({ products }) => {
 										}),
 									);
 								}}
-								className='relative overflow-hidden h-32 bg-slate-200 rounded-lg flex flex-col items-start justify-center pl-28 pr-4  select-none cursor-pointer hover:shadow transition duration-150'
+								className='relative overflow-hidden h-32 bg-slate-200 dark:bg-slate-700 rounded-lg flex flex-col items-start justify-center pl-28 pr-4  select-none cursor-pointer hover:shadow transition-all duration-200'
 							>
-								<div className='absolute h-36 aspect-square bg-slate-400 rounded-full -left-16' />
-								<figure className='absolute w-24 aspect-square bg-slate-600 rounded-full left-2'>
+								<div className='absolute h-36 aspect-square bg-slate-400 dark:bg-slate-800 rounded-full -left-16 transition-all duration-200' />
+								<figure className='absolute w-24 aspect-square bg-slate-600 rounded-full left-2 '>
 									<img
 										src={product.image}
 										alt={product.name}
 										className='object-cover w-full h-full rounded-full'
 									/>
 								</figure>
-								<p className='text-slate-500 text-xs uppercase font-normal'>
+								<p className='text-slate-500 dark:text-slate-400 text-xs uppercase font-normal transition-all duration-200'>
 									{product.categories.map((category: string) => (
 										<span key={category} className='mr-1'>
 											{
@@ -65,10 +65,10 @@ const Products: React.FC<ProductsProps> = ({ products }) => {
 										</span>
 									))}
 								</p>
-								<h3 className='text-base leading-none text-slate-900 font-bold capitalize mb-1'>
+								<h3 className='text-base leading-none text-slate-900 dark:text-slate-100 font-bold capitalize mb-1 transition-all duration-200'>
 									{product.name}
 								</h3>
-								<p className='text-slate-600 text-sm capitalize font-medium'>
+								<p className='text-slate-600 dark:text-slate-300 text-sm capitalize font-medium transition-all duration-200'>
 									{formatCurrency(product.list_price)}
 								</p>
 							</div>

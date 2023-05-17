@@ -4,12 +4,12 @@ import { Dialog, Transition } from '@headlessui/react';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
-export interface DeviceProps {
+export interface DevicesProps {
 	open: boolean;
 	onClose: () => void;
 }
 
-const Device = ({ open, onClose }: DeviceProps) => {
+const Devices = ({ open, onClose }: DevicesProps) => {
 
   const { user } = useSelector((store: AppStore) => store.auth)
 
@@ -32,7 +32,7 @@ const Device = ({ open, onClose }: DeviceProps) => {
 					leaveFrom='opacity-100'
 					leaveTo='opacity-0'
 				>
-					<div className='fixed inset-0 bg-black bg-opacity-25' />
+					<div className='fixed inset-0 bg-black bg-opacity-40' />
 				</Transition.Child>
 				<div className='fixed inset-0 overflow-y-auto'>
 					<div className='flex min-h-full items-center justify-center p-4 text-center'>
@@ -45,10 +45,10 @@ const Device = ({ open, onClose }: DeviceProps) => {
 							leaveFrom='opacity-100 scale-100'
 							leaveTo='opacity-0 scale-95'
 						>
-							<Dialog.Panel className='w-full max-w-sm transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all'>
+							<Dialog.Panel className='w-full max-w-sm transform overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-600 p-6 text-left align-middle shadow-xl transition-all duration-200'>
                 <Dialog.Title
                   as='h3'
-                  className='text-lg font-medium leading-6 text-gray-900'
+                  className='text-lg font-medium leading-6 text-gray-900 dark:text-slate-100 transition-all duration-200'
                 >
                   Selecciona una terminal
                 </Dialog.Title>
@@ -57,12 +57,12 @@ const Device = ({ open, onClose }: DeviceProps) => {
                     user?.devices?.map((device) => (
                       <div key={device.id} className='w-1/2 p-2'>
                         <button
-                          className='w-full h-16 bg-gray-200 rounded-lg flex items-center justify-center'
+                          className='w-full h-16 bg-gray-200 dark:bg-slate-800 transition-all duration-200 rounded-lg flex items-center justify-center'
                           onClick={() => {
                             handlerClose(device)
                           }}
                         >
-                          <span className='capitalize font-semibold text-slate-800' >{device.name}</span>
+                          <span className='capitalize font-semibold text-slate-800 dark:text-slate-300 transition-all duration-200'>{device.name}</span>
                         </button>
                       </div>
                     ))
@@ -77,4 +77,4 @@ const Device = ({ open, onClose }: DeviceProps) => {
 	);
 };
 
-export default Device;
+export default Devices;

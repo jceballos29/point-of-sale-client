@@ -31,14 +31,14 @@ const Storage: React.FC = () => {
 	}, [products, category, search, dispatch]);
 
 	return (
-		<div className='pl-64 pr-96 w-full max-h-full h-full overflow-hidden'>
+		<section className='pl-64 pr-96 w-full max-h-full h-full overflow-hidden'>
 			<div className='w-full h-full max-h-full flex flex-col justify-between overflow-hidden py-4'>
 				<Navbar />
 				<Categories />
 				<Products products={searchedProducts} />
 				<Footer />
 			</div>
-		</div>
+		</section>
 	);
 };
 
