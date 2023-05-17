@@ -1,15 +1,14 @@
-import { LoginResponse, Warehouse } from '@/types'
+import { userAdapter } from '@/adapters';
+import { Routes } from '@/constants';
+import { useCallAndLoad } from '@/hooks';
+import { setUser } from '@/redux/slices/auth.slice';
+import { login } from '@/services';
+import { LoginResponse, Warehouse } from '@/types';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
-import {  useNavigate } from 'react-router-dom';
-import { loginSchema } from '../../schemas';
-import * as yup from 'yup';
-import { useCallAndLoad } from '@/hooks';
-import { login } from '@/services';
-import { Routes } from '@/constants';
 import { useDispatch } from 'react-redux';
-import { setUser } from '@/redux/slices/auth.slice';
-import { userAdapter } from '@/adapters';
+import * as yup from 'yup';
+import { loginSchema } from '../../schemas';
 
 export interface FormProps {
   warehouses: Warehouse[]
@@ -22,7 +21,6 @@ const Form = ({ warehouses }: FormProps) => {
   const { callEndpoint, loading } = useCallAndLoad();
 
   const dispatch = useDispatch()
-  const navigate = useNavigate();
 
 	const {
 		register,
@@ -38,10 +36,9 @@ const Form = ({ warehouses }: FormProps) => {
       sessionStorage.setItem('database', database)
       const response = await callEndpoint(login(request))
       const { token, user } = response.data as LoginResponse
-      console.log(user)
       sessionStorage.setItem('token', token)
       dispatch(setUser(userAdapter(user)))
-      navigate(Routes.ROOT)
+      window.location.href = Routes.ROOT
     } catch (error) {
       console.log(error)
     }

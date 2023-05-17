@@ -18,6 +18,7 @@ import {
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Product } from './components';
+import { Roles } from '@/constants';
 
 export interface OrderState {
 	sale: Sale | null;
@@ -112,7 +113,7 @@ const Order = () => {
 											{order.number}
 										</span>
 									</h2>
-									{user?.role === 'admin' && (
+									{user?.role === Roles.ADMIN && (
 										<p className='text-slate-400 dark:text-slate-300 transition-all duration-200 text-xs capitalize pl-1'>
 											<span className='font-medium'>Vendedor:</span>{' '}
 											<span className='italic'>

@@ -1,4 +1,3 @@
-import axios, { AxiosError } from 'axios';
 import { axiosInstance } from '@/api';
 import { loadAbort } from '@/utils';
 import { SaleResponse } from '@/types';
